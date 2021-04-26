@@ -7,7 +7,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"log"
 	"os"
 	"reflect"
@@ -42,7 +41,7 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 	for _, imp := range node.Imports {
 		lib := strings.Replace(imp.Path.Value, "\"", "", -1)
 		if val, _ := blistPkg[lib]; val {
-			fmt.Println(lib, "is in package blacklist")
+			fmt.Println("!!!", lib, "is in package blacklist")
 		} else {
 			fmt.Println(lib, "is a safe package ")
 		}
@@ -54,9 +53,9 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 
 		case *ast.CompositeLit:
 		case *ast.BasicLit:
-			fmt.Println(n)
 			if exists, _ := blistTypes[n.Kind.String()]; exists {
-				fmt.Println(n.Kind.String(), "is in types blacklist")
+				fmt.Println(n)
+				fmt.Println("!!!" + n.Kind.String(), "is in types blacklist")
 			} else {
 				fmt.Println(n.Kind.String(), "is a safe type")
 			}
@@ -65,12 +64,13 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 				val := reflect.ValueOf(n).Elem()
 				valType := val.Type().Name()
 				if exists, _ := blistTypes[valType]; exists {
-					fmt.Println(valType, "is in types blacklist")
+					fmt.Println(n)
+					fmt.Println("!!!", valType, "is in types blacklist")
 				} else {
 					fmt.Println(valType, "is a safe type")
 				}
 
-				//fmt.Println("----" + val.Type().Name())
+				
 			}
 
 
@@ -105,37 +105,6 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 	//}
 	//return true
 	//})
-}
-
-type astTypes struct {
-	info *types.Info
-}
-
-
-func (v astTypes) Visit(node ast.Node) (w ast.Visitor) {
-	switch node := node.(type) {
-
-	case *ast.CallExpr:
-		// Get some kind of *ast.Ident for the CallExpr that represents the
-		// package. Then we can look it up in v.info. Where exactly it sits in
-		// the ast depends on the form of the function call.
-
-		switch node := node.Fun.(type) {
-		case *ast.SelectorExpr: // foo.ReadFile
-			pkgID := node.X.(*ast.Ident)
-			fmt.Println(v.info.Uses[pkgID].(*types.PkgName).Imported().Path())
-
-		case *ast.Ident: // ReadFile
-			pkgID := node
-			fmt.Println(v.info.Uses[pkgID].Pkg().Path())
-
-		}
-	case *ast.CompositeLit:
-		fmt.Println(node.Type)
-
-	}
-
-	return v
 }
 
 
