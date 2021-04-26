@@ -14,7 +14,7 @@ func main() {
 	//words := []string{hello, num, world}
 	//print_words(words)
 	//loop(rand.Int())
-	//iterate_map()
+	iterate_map()
 	b := make([]byte, 10)
 	_, _ = rand.Read(b)
 	fmt.Println(b)
@@ -57,9 +57,9 @@ func player(table chan int) {
 //}
 //}
 
-//func iterate_map() {
-//var m map[int]string = map[int]string{1: "One", 2: "Two", 3: "Three"}
-//for k, v := range m {
-//fmt.Printf("%d --> %s\n", k, v)
-//}
-//}
+func iterate_map() {
+	var m map[int]string = map[int]string{1: "One", 2: "Two", 3: "Three"}
+	for k, v := range m {
+		fmt.Printf("%d --> %s\n", k, v)
+	}
+}
