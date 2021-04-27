@@ -1,4 +1,5 @@
 time
+sync
 math/rand
 crypto/rand
 unsafe
