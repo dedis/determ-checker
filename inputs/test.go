@@ -17,7 +17,6 @@ func main() {
 
 	var Score float64
 	var Score2 float32
-	
 
 	var Ball int
 	table := make(chan int)

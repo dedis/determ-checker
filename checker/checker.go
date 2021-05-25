@@ -40,10 +40,8 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 	fmt.Println("--- Imports ---")
 	for _, imp := range node.Imports {
 		lib := strings.Replace(imp.Path.Value, "\"", "", -1)
-		if val, _ := blistPkg[lib]; val {
-			fmt.Println("!!!", lib, "is in package blacklist")
-		} else {
-			//fmt.Println(lib, "is a safe package ")
+		if exists, _ := blistPkg[lib]; !exists {
+			fmt.Println("!!!", lib, "is NOT a whitelisted package")
 		}
 	}
 
