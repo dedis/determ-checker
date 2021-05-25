@@ -47,17 +47,14 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 		}
 	}
 
+	fmt.Println("--- Types ---")
 	ast.Inspect(node, func(n ast.Node) bool {
-
 		switch n := n.(type) {
-
 		case *ast.CompositeLit:
 		case *ast.BasicLit:
 			if exists, _ := blistTypes[n.Kind.String()]; exists {
 				fmt.Println(n, n.Kind)
 				fmt.Println("!!!" + n.Kind.String(), "is in types blacklist")
-			} else {
-				fmt.Println(n.Kind.String(), "is a safe type")
 			}
 		default:
 			if n != nil {
@@ -66,47 +63,12 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 				if exists, _ := blistTypes[valType]; exists {
 					fmt.Println(n, val.Type())
 					fmt.Println("!!!", valType, "is in types blacklist")
-				} else {
-					fmt.Println(valType, "is a safe type")
 				}
-
-
 			}
-
-
 		}
 		return true
 	})
-
-	// info.Uses allows to lookup import paths for identifiers.
-	//info := &types.Info{
-	//	Uses: make(map[*ast.Ident]types.Object),
-	//}
-
-	//ast.Walk(astTypes{info}, node)
-
-
-	//fmt.Println("--- Function declarations ---")
-	//for _, decl := range node.Decls {
-	//fnDecl, ok := decl.(*ast.FuncDecl)
-	//if ok {
-	//fmt.Println(fnDecl.Name.Name)
-	//}
-	//}
-	//ast.Print(fset, node)
-
-	//fmt.Println("--- Inspect ---")
-	//ast.Inspect(node, func(n ast.Node) bool {
-	//switch x := n.(type) {
-	//case *ast.Ident:
-	//fmt.Println("Identifier:", x.Name)
-	//case *ast.BasicLit:
-	//fmt.Println("Literal:", x.Kind.String(), x.ValuePos, x.Value)
-	//}
-	//return true
-	//})
 }
-
 
 func main() {
 	spath := flag.String("s", "", "source file")
@@ -115,7 +77,7 @@ func main() {
 	flag.Parse()
 	blistPkg := getBlacklist(bppath)
 	blistTypes := getBlacklist(btpath)
-	if blistPkg == nil {
+	if blistPkg == nil || blistTypes == nil {
 		os.Exit(1)
 	}
 	analyzeSource(spath, blistPkg, blistTypes)
