@@ -20,11 +20,18 @@ func main() {
 	fmt.Println(b)
 	_ = sha256.New()
 
+
+	var Score float64
+	var Score2 float32
+	
+
 	var Ball int
 	table := make(chan int)
 	go player(table)
 	go player(table)
 	table <- Ball
+	Score = Score + 1.05
+	Score2 = Score2 + 1.0000000000072
 	time.Sleep(1 * time.Second)
 	<-table
 }

@@ -43,7 +43,7 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 		if val, _ := blistPkg[lib]; val {
 			fmt.Println("!!!", lib, "is in package blacklist")
 		} else {
-			fmt.Println(lib, "is a safe package ")
+			//fmt.Println(lib, "is a safe package ")
 		}
 	}
 
@@ -54,7 +54,7 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 		case *ast.CompositeLit:
 		case *ast.BasicLit:
 			if exists, _ := blistTypes[n.Kind.String()]; exists {
-				fmt.Println(n)
+				fmt.Println(n, n.Kind)
 				fmt.Println("!!!" + n.Kind.String(), "is in types blacklist")
 			} else {
 				fmt.Println(n.Kind.String(), "is a safe type")
@@ -64,13 +64,13 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 				val := reflect.ValueOf(n).Elem()
 				valType := val.Type().Name()
 				if exists, _ := blistTypes[valType]; exists {
-					fmt.Println(n)
+					fmt.Println(n, val.Type())
 					fmt.Println("!!!", valType, "is in types blacklist")
 				} else {
 					fmt.Println(valType, "is a safe type")
 				}
 
-				
+
 			}
 
 

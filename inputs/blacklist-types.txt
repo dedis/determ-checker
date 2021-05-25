@@ -1,3 +1,4 @@
 MapType
 ChanType
 GoStmt
+FLOAT
