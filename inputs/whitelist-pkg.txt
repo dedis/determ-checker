@@ -1,2 +1,4 @@
 fmt
 bytes
+hash
+encoding
