@@ -1,8 +1,7 @@
-package main
+package checker
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -13,35 +12,34 @@ import (
 	"strings"
 )
 
-func getBlacklist(bpath *string) (bl map[string]bool) {
-	file, err := os.Open(*bpath)
+func ReadList(path *string) (listMap map[string]bool) {
+	file, err := os.Open(*path)
 	if err != nil {
 		log.Fatal(err)
-		return bl
+		return listMap
 	}
 	defer file.Close()
 
-	bl = make(map[string]bool)
+	listMap = make(map[string]bool)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		bl[scanner.Text()] = true
+		listMap[scanner.Text()] = true
 	}
-	return bl
+	return listMap
 }
 
-
-func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[string]bool) {
+func AnalyzeSource(spath *string, wlistPkg map[string]bool, blistTypes map[string]bool) bool {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, *spath, nil, parser.ParseComments)
 	if err != nil {
 		log.Fatal(err)
-		return
+		return false
 	}
 
 	fmt.Println("--- Imports ---")
 	for _, imp := range node.Imports {
 		lib := strings.Replace(imp.Path.Value, "\"", "", -1)
-		if exists, _ := blistPkg[lib]; !exists {
+		if exists, _ := wlistPkg[lib]; !exists {
 			fmt.Println("!!!", lib, "is NOT a whitelisted package")
 		}
 	}
@@ -67,10 +65,10 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 			for idx, ident := range n.Lhs {
 				if reflect.ValueOf(ident).Elem().Type().String() == "ast.Ident" {
 					rhsIdx := idx
-                    // rhs index is 0 if multiple vars have a single value
-                    if idx >= len(n.Rhs) {
-                    	rhsIdx = 0
-                    }
+					// rhs index is 0 if multiple vars have a single value
+					if idx >= len(n.Rhs) {
+						rhsIdx = 0
+					}
 					// check for maps defined with make()
 					if reflect.TypeOf(n.Rhs[rhsIdx]).String() == "*ast.CallExpr" {
 						if len(n.Rhs[rhsIdx].(*ast.CallExpr).Args) != 0 && reflect.ValueOf(n.Rhs[rhsIdx].(*ast.CallExpr).Args[0]).Elem().Type().String() == "ast.MapType" {
@@ -80,14 +78,14 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 					// check for maps defined both by type and with make()
 					// TODO check if this is really needed
 					if reflect.TypeOf(n.Rhs[rhsIdx]).String() == "*ast.CompositeLit" {
-                    	if reflect.ValueOf(n.Rhs[rhsIdx].(*ast.CompositeLit).Type).Elem().Type().String() == "ast.MapType" {
-                        	mapVars[ident.(*ast.Ident).Name] = true
-                        }
-                   	}
+						if reflect.ValueOf(n.Rhs[rhsIdx].(*ast.CompositeLit).Type).Elem().Type().String() == "ast.MapType" {
+							mapVars[ident.(*ast.Ident).Name] = true
+						}
+					}
 				}
 			}
-		// map declaration using var
-        case *ast.GenDecl:
+			// map declaration using var
+		case *ast.GenDecl:
 			if n.Tok == token.CONST || n.Tok == token.VAR {
 				for _, s := range n.Specs {
 					// iterate the identifiers
@@ -104,15 +102,15 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 								// variables are initialized
 								// if all variables are initialized to the same value, then rhs index is 0
 								rhsIdx := idx
-								if  idx >= len(s.(*ast.ValueSpec).Values) {
+								if idx >= len(s.(*ast.ValueSpec).Values) {
 									rhsIdx = 0
 								}
 								// the rhs can be a call to make()
 								if reflect.TypeOf(s.(*ast.ValueSpec).Values[rhsIdx]).String() == "*ast.CallExpr" {
-                        			if len(s.(*ast.ValueSpec).Values[rhsIdx].(*ast.CallExpr).Args) != 0 && reflect.ValueOf(s.(*ast.ValueSpec).Values[rhsIdx].(*ast.CallExpr).Args[0]).Elem().Type().String() == "ast.MapType" {
-                            			mapVars[ident.Name] = true
-                        			}
-                    			}
+									if len(s.(*ast.ValueSpec).Values[rhsIdx].(*ast.CallExpr).Args) != 0 && reflect.ValueOf(s.(*ast.ValueSpec).Values[rhsIdx].(*ast.CallExpr).Args[0]).Elem().Type().String() == "ast.MapType" {
+										mapVars[ident.Name] = true
+									}
+								}
 								// or it can be a composite literal of type definition and a call to make
 								if reflect.TypeOf(s.(*ast.ValueSpec).Values[rhsIdx]).String() == "*ast.CompositeLit" {
 									if reflect.ValueOf(s.(*ast.ValueSpec).Values[rhsIdx].(*ast.CompositeLit).Type).Elem().Type().String() == "ast.MapType" {
@@ -123,40 +121,28 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 						}
 					}
 				}
-			fmt.Println("DEBUG defined map vars",mapVars)
+				fmt.Println("DEBUG defined map vars", mapVars)
 			}
 
 		// check for ranges along maps
 		case *ast.RangeStmt:
 			rangeLit := n.X.(*ast.Ident)
-            // is the iterated variable a map?
+			// is the iterated variable a map?
 			if mapVars[rangeLit.Name] == true {
-                fmt.Println("!!! Potential problem: variable", rangeLit.Name, "is an iterated map")
-           	}
+				fmt.Println("!!! Potential problem: variable", rangeLit.Name, "is an iterated map")
+			}
 		default:
 			if n != nil {
 				val := reflect.ValueOf(n).Elem()
 				valType := val.Type().Name()
 				if exists, _ := blistTypes[valType]; exists {
 					fmt.Println("!!!", valType, "is in types blacklist")
-				}  else {
+				} else {
 					//fmt.Println("!!!", n, val, val.Type(), "is in types whitelist")
 				}
 			}
 		}
 		return true
 	})
-}
-
-func main() {
-	spath := flag.String("s", "", "source file")
-	bppath := flag.String("bp", "", "blacklist packages file")
-	btpath := flag.String("bt", "", "blacklist types file")
-	flag.Parse()
-	blistPkg := getBlacklist(bppath)
-	blistTypes := getBlacklist(btpath)
-	if blistPkg == nil || blistTypes == nil {
-		os.Exit(1)
-	}
-	analyzeSource(spath, blistPkg, blistTypes)
+	return true
 }
