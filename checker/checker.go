@@ -89,8 +89,19 @@ func analyzeSource(spath *string, blistPkg map[string]bool, blistTypes map[strin
 				}
 			}
 			*/
-		// TODO variable map declaration
+		// map declaration using var
         case *ast.GenDecl:
+			if n.Tok == token.CONST || n.Tok == token.VAR {
+				for _, s := range n.Specs {
+					fmt.Println("s.(*ast.ValueSpec).Type().String()=", reflect.ValueOf(s.(*ast.ValueSpec).Type).Elem().Type().String())
+					if reflect.ValueOf(s.(*ast.ValueSpec).Type).Elem().Type().String() == "ast.MapType" {
+						for _, ident := range s.(*ast.ValueSpec).Names {
+							mapVars[ident.Name] = true
+						}
+						fmt.Println("map vars",mapVars)
+					}
+				}
+			}
 		case *ast.ExprStmt:
 			fmt.Println("x=",n.X)
 		// value declaration
