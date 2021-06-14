@@ -34,6 +34,11 @@ func main() {
 	for k, v := range mm {
 		fmt.Println(k, "-->", v)
 	}
+
+	var mmm map[int]bool
+    mmm[0] = false
+    mmm[1] = true
+
 }
 
 func player(table chan int) {
