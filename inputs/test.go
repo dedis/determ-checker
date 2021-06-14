@@ -36,6 +36,7 @@ func main() {
 	}
 
 	var mmm map[int]bool
+	var x, mmmm = 2, make(map[int]int)
     mmm[0] = false
     mmm[1] = true
 
