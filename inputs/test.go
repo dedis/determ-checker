@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"time"
+	"math"
 )
 
 func main() {
@@ -35,10 +36,14 @@ func main() {
 		fmt.Println(k, "-->", v)
 	}
 
+	// various map definitions
 	var mmm map[int]bool
 	var x, mmmm = 2, make(map[int]int)
     mmm[0] = false
     mmm[1] = true
+
+	// NaN outputs
+	z := 2.0 + math.Log(-1.0)
 
 }
 

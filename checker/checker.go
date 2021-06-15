@@ -28,6 +28,32 @@ func ReadList(path *string) (listMap map[string]bool) {
 	return listMap
 }
 
+func ReadStrBetweenFileOffsets(path *string, start token.Pos, end token.Pos) string {
+	file, err := os.Open(*path)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fset := token.NewFileSet()
+	_ = fset.AddFile(*path, -1, int(fi.Size()))
+	crtFile := fset.File(start)
+	off1 := crtFile.Offset(start)
+
+	buf := make([]byte, end-start+1)
+	_, err = file.ReadAt(buf, int64(off1))
+	if err != nil {
+        log.Fatal(err)
+    }
+
+	return string(buf[:])
+}
+
 func AnalyzeSource(spath *string, wlistPkg map[string]bool, blistTypes map[string]bool) bool {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, *spath, nil, parser.ParseComments)
@@ -58,6 +84,18 @@ func AnalyzeSource(spath *string, wlistPkg map[string]bool, blistTypes map[strin
 				fmt.Println("!!!", n.Kind.String(), "is in types blacklist")
 			} else {
 				//fmt.Println("!!!", n, val, n.Kind, n.Kind.String(), "is in types whitelist")
+			}
+		// detect transcedental fct that return NaNs
+		case *ast.CallExpr:
+			// assume this is a math function
+			startCallOffset := n.Fun.Pos()
+			endCallOffset := n.Fun.End()-1
+			startArgOffset := n.Lparen
+			endArgOffset := n.Rparen
+			callStr := ReadStrBetweenFileOffsets(spath, startCallOffset, endCallOffset)
+			argStr := ReadStrBetweenFileOffsets(spath, startArgOffset, endArgOffset)
+			if strings.Contains(callStr, "math") {
+				fmt.Println("call", callStr, argStr)
 			}
 		// shorthand map declaration
 		case *ast.AssignStmt:
