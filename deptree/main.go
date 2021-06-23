@@ -55,18 +55,9 @@ func main() {
 	//blTypes := checker.ReadList(&blTypes)
 
 	for _, pkg := range pkgs {
-		fmt.Println(pkg.ID, pkg.PkgPath)
-		fmt.Println(pkg.Imports)
-		//fmt.Println(pkg.Imports["go.dedis.ch/kyber/v3"].GoFiles)
-		imports := pkg.Imports["go.dedis.ch/kyber/v3/proof"]
-		files := imports.GoFiles
-		fmt.Println("Other files:", imports.OtherFiles)
-		for _, f := range files {
-			fmt.Println("Source file:", f)
-			//checker.AnalyzeSource(&f, blPkg, blTypes)
-		}
-		for _, p := range imports.Imports {
-			fmt.Println("Import dependency:", p.Name)
+		imports := pkg.Imports
+		for k, v := range imports {
+			fmt.Println(k, v)
 		}
 	}
 }
