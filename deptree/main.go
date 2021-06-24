@@ -6,27 +6,54 @@ import (
 	"go/token"
 	"log"
 
-	"golang.org/x/tools/go/packages"
+	"github.com/dedis/deter-checker/checker"
+	pkgs "golang.org/x/tools/go/packages"
 )
 
-var wlFile string = "../inputs/whitelist-pkg.txt"
-var blTypes string = "../inputs/blacklist-types.txt"
+var stdPkgs = make(map[string]struct{})
+var exists = struct{}{}
 
-const mode packages.LoadMode = packages.NeedName |
-	packages.NeedFiles |
-	packages.NeedImports
+const mode pkgs.LoadMode = pkgs.NeedName |
+	pkgs.NeedFiles |
+	pkgs.NeedImports
 
-//func findDependencies(pkg *packages.Package) {
-//fmt.Println("Printing dependencies of:", pkg.Name)
-//if len(pkg.Imports) == 0 {
-//return
-//}
-//for _, p := range pkg.Imports {
-//fmt.Println(">>>", p.Name)
-//findDependencies(p)
-//}
-//return
-//}
+func init() {
+	packages, err := pkgs.Load(nil, "std")
+	if err != nil {
+		panic(err)
+	}
+
+	for _, p := range packages {
+		stdPkgs[p.PkgPath] = exists
+	}
+}
+
+func checkFiles(deps map[string]*pkgs.Package, wl, bl map[string]bool) {
+	for name, pkg := range deps {
+		fmt.Println("Checking source files of:", name)
+		files := pkg.GoFiles
+		for _, f := range files {
+			fmt.Println("====", f, "====")
+			checker.AnalyzeSource(&f, wl, bl)
+		}
+	}
+}
+
+func findDependencies(pkgList []*pkgs.Package) map[string]*pkgs.Package {
+	pkgSet := make(map[string]*pkgs.Package)
+	for _, pkg := range pkgList {
+		imports := pkg.Imports
+		for _, imp := range imports {
+			impStr := imp.String()
+			if _, ok := stdPkgs[impStr]; !ok {
+				if _, ok := pkgSet[impStr]; !ok {
+					pkgSet[impStr] = imp
+				}
+			}
+		}
+	}
+	return pkgSet
+}
 
 func main() {
 	flag.Usage = func() {
@@ -38,26 +65,20 @@ func main() {
 
 	pattern := flag.String("pattern", "./...", "Go package")
 	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatal("Expecting a single argument: directory of module")
-	}
 
-	fmt.Println(*pattern)
+	wfile := flag.Args()[1]
+	bfile := flag.Args()[2]
 
-	var fset = token.NewFileSet()
-	cfg := &packages.Config{Mode: mode, Dir: flag.Args()[0], Fset: fset}
-	pkgs, err := packages.Load(cfg, *pattern)
+	fset := token.NewFileSet()
+	cfg := &pkgs.Config{Mode: mode, Dir: flag.Args()[0], Fset: fset}
+	pkgList, err := pkgs.Load(cfg, *pattern)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//blPkg := checker.ReadList(&wlFile)
-	//blTypes := checker.ReadList(&blTypes)
+	wl := checker.ReadList(&wfile)
+	bl := checker.ReadList(&bfile)
 
-	for _, pkg := range pkgs {
-		imports := pkg.Imports
-		for k, v := range imports {
-			fmt.Println(k, v)
-		}
-	}
+	deps := findDependencies(pkgList)
+	checkFiles(deps, wl, bl)
 }
